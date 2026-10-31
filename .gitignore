@@ -1,0 +1,21 @@
+# Build directories
+build/
+bin/
+lib/
+out/
+
+# Visual Studio / IDE files
+.vs/
+*.user
+*.suo
+*.VC.db
+*.sln.docstates
+
+# CMake artifacts
+CMakeUserPresets.json
+CMakeFiles/
+CMakeCache.txt
+
+# OS generated
+.DS_Store
+Thumbs.db
