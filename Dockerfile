@@ -2,14 +2,15 @@ FROM ubuntu:22.04 AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
     ninja-build \
     git \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /src
+WORKDIR /app
 COPY . .
 
 RUN cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
@@ -17,11 +18,7 @@ RUN cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
 
 FROM ubuntu:22.04 AS runtime
 
-RUN apt-get update && apt-get install -y \
-    libstdc++6 \
-    && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /app/build/tests/riscv_tests /usr/local/bin/riscv_tests
+COPY --from=builder /app/build/examples/riscv_demo /usr/local/bin/riscv_demo
 
-COPY --from=builder /src/build/tests/riscv_tests /usr/local/bin/riscv_tests
-COPY --from=builder /src/build/examples/riscv_demo /usr/local/bin/riscv_demo
-
-CMD echo "=== Running Tests ===" && riscv_tests && echo "" && echo "=== Running Demo ===" && riscv_demo
+CMD ["sh", "-c", "riscv_tests && riscv_demo"]

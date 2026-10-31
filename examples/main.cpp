@@ -9,24 +9,24 @@
 #include <vector>
 
 int main() {
-    // Программа вычисления 10-го числа Фибоначчи на RV32I:
+    // fib(10) на RV32I:
     // a0 (x10) = 10 (n)
     // a1 (x11) = 0  (fib(0))
     // a2 (x12) = 1  (fib(1))
-    // a3 (x13) = 0  (счетчик цикла i)
+    // a3 (x13) = 0  (счетчик i)
     // a4 (x14) = temp
     const std::vector<uint32_t> program = {
         0x00A00513,  // addi a0, zero, 10
         0x00000593,  // addi a1, zero, 0
         0x00100613,  // addi a2, zero, 1
         0x00000693,  // addi a3, zero, 0
-        0x00A68C63,  // beq  a3, a0, 24   (выход из цикла при i == n)
-        0x00C58733,  // add  a4, a1, a2   (temp = a + b)
-        0x000605B3,  // add  a1, a2, zero (a = b)
-        0x00070633,  // add  a2, a4, zero (b = temp)
-        0x00168693,  // addi a3, a3, 1    (i++)
-        0xFEDFF06F,  // jal  zero, -20    (переход к телу цикла)
-        0x0000006F   // jal  zero, 0      (бесконечный цикл - точка останова)
+        0x00A68C63,  // beq  a3, a0, 24
+        0x00C58733,  // add  a4, a1, a2
+        0x000605B3,  // add  a1, a2, zero
+        0x00070633,  // add  a2, a4, zero
+        0x00168693,  // addi a3, a3, 1
+        0xFEDFF06F,  // jal  zero, -20
+        0x00100073   // ebreak
     };
 
     std::cout << "--- Дизассемблирование программы (RV32I) ---\n";
@@ -43,16 +43,24 @@ int main() {
                   << "    " << asm_str << "\n";
     }
 
-    std::cout << "\n--- Запуск эмулятора ---\n";
+    std::cout << "\n--- Запуск эмулятора с пошаговой трассировкой (Trace) ---\n";
     riscv::Emulator emu;
     emu.LoadProgram(program);
-    emu.Run(500);
+    emu.EnableTracing(true, &std::cout);
+    emu.Run();
 
-    std::cout << "Выполнение завершено.\n";
+    std::cout << "\nВыполнение завершено.";
+    if (emu.HasMemoryFault()) {
+        std::cout << " [ОШИБКА ДОСТУПА К ПАМЯТИ по адресу 0x" << std::hex << emu.GetFaultAddress() << "]\n";
+    } else {
+        std::cout << " Причина останова: "
+                  << (emu.GetTrapCause() == riscv::TrapCause::Breakpoint ? "Breakpoint (EBREAK)" : "Halt")
+                  << "\n";
+    }
     std::cout << "fib(10) в регистре a1: " << std::dec << emu.GetRegister(11) << "\n\n";
 
     std::cout << "--- Дамп регистров ---\n";
-    std::cout << emu.DumpRegisters();
+    std::cout << emu.DumpRegisters(true);
 
     riscv::ExecutionStats stats = emu.GetStats();
     std::cout << "\n--- Статистика по инструкциям ---\n";
@@ -61,6 +69,7 @@ int main() {
     std::cout << "  Ветвления      : " << stats.branch_count << "\n";
     std::cout << "  Переходы       : " << stats.jump_count << "\n";
     std::cout << "  Память         : " << stats.memory_count << "\n";
+    std::cout << "  Системные      : " << stats.system_count << "\n";
 
     return 0;
 }

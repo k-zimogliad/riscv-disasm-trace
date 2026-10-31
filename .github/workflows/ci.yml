@@ -7,42 +7,30 @@ on:
     branches: [main]
 
 jobs:
-  build-gcc:
-    name: Build & Test (GCC)
+  build-and-test:
+    name: ${{ matrix.cxx }} (Release)
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - cc: gcc
+            cxx: g++
+          - cc: clang
+            cxx: clang++
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Configure
         run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential cmake ninja-build
-
-      - name: Configure (GCC)
-        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER=${{ matrix.cc }} \
+            -DCMAKE_CXX_COMPILER=${{ matrix.cxx }}
 
       - name: Build
         run: cmake --build build
 
-      - name: Test
-        run: ctest --test-dir build --output-on-failure
-
-  build-clang:
-    name: Build & Test (Clang)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential cmake ninja-build clang
-
-      - name: Configure (Clang)
-        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
-
-      - name: Build
-        run: cmake --build build
-
-      - name: Test
+      - name: Run Tests
         run: ctest --test-dir build --output-on-failure

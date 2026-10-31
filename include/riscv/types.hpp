@@ -9,49 +9,63 @@ using Word = uint32_t;
 using Address = uint32_t;
 using RegisterValue = uint32_t;
 
-// Формат кодирования инструкции
 enum class InstructionType {
     R, I, S, B, U, J, Unknown
 };
 
-// Опкоды базового набора RV32I (биты [6:0])
 enum class Opcode : uint32_t {
-    Lui    = 0b0110111,
-    Auipc  = 0b0010111,
-    Jal    = 0b1101111,
-    Jalr   = 0b1100111,
-    Branch = 0b1100011,
-    Load   = 0b0000011,
-    Store  = 0b0100011,
-    OpImm  = 0b0010011,
-    Op     = 0b0110011
+    Load    = 0x03,
+    MiscMem = 0x0F,
+    OpImm   = 0x13,
+    Auipc   = 0x17,
+    Store   = 0x23,
+    Op      = 0x33,
+    Lui     = 0x37,
+    Branch  = 0x63,
+    Jalr    = 0x67,
+    Jal     = 0x6F,
+    System  = 0x73
 };
 
-// Идентификаторы инструкций RV32I
 enum class InstructionId {
+    // R-type
     ADD, SUB, SLL, SLT, SLTU, XOR, SRL, SRA, OR, AND,
+    // I-type (ALU)
     ADDI, SLTI, SLTIU, XORI, ORI, ANDI, SLLI, SRLI, SRAI,
-    LW, JALR, SW,
+    // I-type (Loads)
+    LB, LH, LW, LBU, LHU,
+    // I-type (Jump & System)
+    JALR, ECALL, EBREAK, FENCE,
+    // S-type (Stores)
+    SB, SH, SW,
+    // B-type (Branches)
     BEQ, BNE, BLT, BGE, BLTU, BGEU,
-    LUI, AUIPC, JAL,
+    // U-type
+    LUI, AUIPC,
+    // J-type
+    JAL,
+
     UNKNOWN
 };
 
-// Группы для подсчета статистики выполнения
 enum class InstructionGroup {
-    ALU, Branch, Jump, Memory, Unknown
+    ALU,
+    Branch,
+    Jump,
+    Memory,
+    System,
+    Unknown
 };
 
-// Счетчики выполненных инструкций по группам
 struct ExecutionStats {
     uint64_t total_instructions = 0;
     uint64_t alu_count = 0;
     uint64_t branch_count = 0;
     uint64_t jump_count = 0;
     uint64_t memory_count = 0;
+    uint64_t system_count = 0;
 };
 
-// ABI-имена регистров (x0 = zero, x1 = ra, ...)
 inline constexpr std::array<const char*, 32> ABI_REG_NAMES = {
     "zero", "ra", "sp", "gp", "tp", "t0", "t1", "t2",
     "s0",   "s1", "a0", "a1", "a2", "a3", "a4", "a5",
@@ -59,7 +73,6 @@ inline constexpr std::array<const char*, 32> ABI_REG_NAMES = {
     "s8",   "s9", "s10","s11","t3", "t4", "t5", "t6"
 };
 
-// Определяет группу инструкции по её идентификатору
 constexpr InstructionGroup GetInstructionGroup(InstructionId id) noexcept {
     switch (id) {
         case InstructionId::ADD:   case InstructionId::SUB:
@@ -74,14 +87,27 @@ constexpr InstructionGroup GetInstructionGroup(InstructionId id) noexcept {
         case InstructionId::SRAI:
         case InstructionId::LUI:   case InstructionId::AUIPC:
             return InstructionGroup::ALU;
+
         case InstructionId::BEQ:  case InstructionId::BNE:
         case InstructionId::BLT:  case InstructionId::BGE:
         case InstructionId::BLTU: case InstructionId::BGEU:
             return InstructionGroup::Branch;
-        case InstructionId::JAL:  case InstructionId::JALR:
+
+        case InstructionId::JAL:
+        case InstructionId::JALR:
             return InstructionGroup::Jump;
-        case InstructionId::LW:   case InstructionId::SW:
+
+        case InstructionId::LB:  case InstructionId::LH:
+        case InstructionId::LW:  case InstructionId::LBU:
+        case InstructionId::LHU: case InstructionId::SB:
+        case InstructionId::SH:  case InstructionId::SW:
             return InstructionGroup::Memory;
+
+        case InstructionId::ECALL:
+        case InstructionId::EBREAK:
+        case InstructionId::FENCE:
+            return InstructionGroup::System;
+
         default:
             return InstructionGroup::Unknown;
     }

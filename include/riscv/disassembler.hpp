@@ -5,7 +5,6 @@
 
 namespace riscv {
 
-// Преобразование декодированной инструкции в текстовый ассемблер
 class Disassembler {
 public:
     static std::string ToString(const Instruction& inst, bool use_abi_names = true);

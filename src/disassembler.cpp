@@ -8,44 +8,55 @@ namespace riscv {
 
 const char* Disassembler::Mnemonic(InstructionId id) {
     switch (id) {
-        case InstructionId::ADD:   return "add";
-        case InstructionId::SUB:   return "sub";
-        case InstructionId::SLL:   return "sll";
-        case InstructionId::SLT:   return "slt";
-        case InstructionId::SLTU:  return "sltu";
-        case InstructionId::XOR:   return "xor";
-        case InstructionId::SRL:   return "srl";
-        case InstructionId::SRA:   return "sra";
-        case InstructionId::OR:    return "or";
-        case InstructionId::AND:   return "and";
+        case InstructionId::ADD:    return "add";
+        case InstructionId::SUB:    return "sub";
+        case InstructionId::SLL:    return "sll";
+        case InstructionId::SLT:    return "slt";
+        case InstructionId::SLTU:   return "sltu";
+        case InstructionId::XOR:    return "xor";
+        case InstructionId::SRL:    return "srl";
+        case InstructionId::SRA:    return "sra";
+        case InstructionId::OR:     return "or";
+        case InstructionId::AND:    return "and";
 
-        case InstructionId::ADDI:  return "addi";
-        case InstructionId::SLTI:  return "slti";
-        case InstructionId::SLTIU: return "sltiu";
-        case InstructionId::XORI:  return "xori";
-        case InstructionId::ORI:   return "ori";
-        case InstructionId::ANDI:  return "andi";
-        case InstructionId::SLLI:  return "slli";
-        case InstructionId::SRLI:  return "srli";
-        case InstructionId::SRAI:  return "srai";
+        case InstructionId::ADDI:   return "addi";
+        case InstructionId::SLTI:   return "slti";
+        case InstructionId::SLTIU:  return "sltiu";
+        case InstructionId::XORI:   return "xori";
+        case InstructionId::ORI:    return "ori";
+        case InstructionId::ANDI:   return "andi";
+        case InstructionId::SLLI:   return "slli";
+        case InstructionId::SRLI:   return "srli";
+        case InstructionId::SRAI:   return "srai";
 
-        case InstructionId::LW:    return "lw";
-        case InstructionId::SW:    return "sw";
+        case InstructionId::LB:     return "lb";
+        case InstructionId::LH:     return "lh";
+        case InstructionId::LW:     return "lw";
+        case InstructionId::LBU:    return "lbu";
+        case InstructionId::LHU:    return "lhu";
 
-        case InstructionId::BEQ:   return "beq";
-        case InstructionId::BNE:   return "bne";
-        case InstructionId::BLT:   return "blt";
-        case InstructionId::BGE:   return "bge";
-        case InstructionId::BLTU:  return "bltu";
-        case InstructionId::BGEU:  return "bgeu";
+        case InstructionId::SB:     return "sb";
+        case InstructionId::SH:     return "sh";
+        case InstructionId::SW:     return "sw";
 
-        case InstructionId::LUI:   return "lui";
-        case InstructionId::AUIPC: return "auipc";
+        case InstructionId::BEQ:    return "beq";
+        case InstructionId::BNE:    return "bne";
+        case InstructionId::BLT:    return "blt";
+        case InstructionId::BGE:    return "bge";
+        case InstructionId::BLTU:   return "bltu";
+        case InstructionId::BGEU:   return "bgeu";
 
-        case InstructionId::JAL:   return "jal";
-        case InstructionId::JALR:  return "jalr";
+        case InstructionId::LUI:    return "lui";
+        case InstructionId::AUIPC:  return "auipc";
 
-        default:                   return "unknown";
+        case InstructionId::JAL:    return "jal";
+        case InstructionId::JALR:   return "jalr";
+
+        case InstructionId::ECALL:  return "ecall";
+        case InstructionId::EBREAK: return "ebreak";
+        case InstructionId::FENCE:  return "fence";
+
+        default:                    return "unknown";
     }
 }
 
@@ -73,13 +84,21 @@ std::string Disassembler::ToString(const Instruction& inst, bool use_abi_names) 
 
     std::ostringstream out;
 
+    if (inst.id == InstructionId::ECALL ||
+        inst.id == InstructionId::EBREAK ||
+        inst.id == InstructionId::FENCE) {
+        return mnem;
+    }
+
     switch (inst.type) {
         case InstructionType::R:
             out << mnem << " " << rd_name << ", " << rs1_name << ", " << rs2_name;
             break;
 
         case InstructionType::I:
-            if (inst.id == InstructionId::LW || inst.id == InstructionId::JALR) {
+            if (inst.id == InstructionId::LB || inst.id == InstructionId::LH ||
+                inst.id == InstructionId::LW || inst.id == InstructionId::LBU ||
+                inst.id == InstructionId::LHU || inst.id == InstructionId::JALR) {
                 out << mnem << " " << rd_name << ", " << inst.immediate << "(" << rs1_name << ")";
             } else {
                 out << mnem << " " << rd_name << ", " << rs1_name << ", " << inst.immediate;
